@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: firstcraft-backend
+    env: node
+    plan: free
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm run start:production
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: FRONTEND_URL
+        value: https://production-kappa.vercel.app
+      - key: API_BASE_URL
+        value: https://firstcraft-backend-q68n.onrender.com/api
+      - key: CORS_ORIGIN
+        value: https://production-kappa.vercel.app,https://firstcrafttest-owfgqafzx3.vercel.app
+      - key: DATABASE_URL
+        value: your_database_connection_string_here
+      - key: JWT_SECRET
+        value: your_jwt_secret_here
+      - key: JWT_EXPIRES_IN
+        value: 24h
+      - key: JWT_REFRESH_SECRET
+        value: your_refresh_secret_here
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      - key: BCRYPT_ROUNDS
+        value: 12
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: /api/$1

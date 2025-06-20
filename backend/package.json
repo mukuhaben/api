@@ -1,0 +1,66 @@
+{
+  "name": "firstcraft-backend",
+  "version": "1.0.0",
+  "description": "FirstCraft E-commerce Backend API",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "start:production": "NODE_ENV=production node src/server.js",
+    "dev": "nodemon src/server.js",
+    "migrate": "node src/scripts/migrate.js",
+    "seed": "node src/scripts/seed.js",
+    "setup": "npm run migrate && npm run seed",
+    "test": "jest",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "start:prod": "cross-env NODE_ENV=production node src/server.js"
+  },
+  "keywords": [
+    "ecommerce",
+    "api",
+    "nodejs",
+    "express",
+    "postgresql"
+  ],
+  "author": "FirstCraft Ltd",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.2",
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.7.4",
+    "connect-redis": "^7.1.0",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.1.5",
+    "express-session": "^1.17.3",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.1.0",
+    "joi": "^17.11.0",
+    "jsonwebtoken": "^9.0.2",
+    "moment": "^2.29.4",
+    "morgan": "^1.10.0",
+    "multer": "^2.0.1",
+    "nodemailer": "^6.9.7",
+    "pg": "^8.11.3",
+    "redis": "^4.6.10",
+    "sequelize": "^6.37.7",
+    "sharp": "^0.34.2",
+    "socket.io": "^4.7.2",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.23.5",
+    "babel-jest": "^29.7.0",
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.1",
+    "supertest": "^6.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}
