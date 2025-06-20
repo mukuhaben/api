@@ -312,4 +312,23 @@ EXPOSE 3000
 CMD ["npm", "start"]
 \`\`\`
 
+# Category Page Component
+
+This folder contains the Category page component that handles the display of products within specific categories.
+
+## Structure
+- `View/Index.jsx` - Main category page component
+- Handles dynamic routing via `/category/:slug`
+- Integrates with API for product fetching
+- Includes pagination, search, and filtering functionality
+
+## Features
+- Dynamic category loading from API
+- Product grid with responsive design
+- Wishlist and cart integration
+- Search and sort functionality
+- Breadcrumb navigation
+- Error handling and loading states
+
+
 This README provides comprehensive setup instructions and troubleshooting guidance for the FirstCraft e-commerce application.

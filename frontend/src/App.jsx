@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react"
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { ThemeProvider, createTheme } from "@mui/material/styles"
 import CssBaseline from "@mui/material/CssBaseline"
-import  HomePage from "./pages/Home/View/Index"
+import HomePage from "./pages/Home/View/Index"
 import NavigationBar from "./components/NavigationBar"
 import Footer from "./components/Footer"
 import ProductDetails from "./pages/ProductDetails/View/Index"
@@ -18,6 +18,9 @@ import SalesAgentPage from "./pages/SalesAgent/View/Index"
 import CheckoutPage from "./pages/Checkout/View/Index"
 import AdminPage from "./pages/Admin/View/Index"
 import ErrorBoundary from "./components/common/ErrorBoundary"
+// CHANGE: Add category route for dynamic category pages
+// Import the new CategoryPage component
+import CategoryPage from "./pages/CategoryPage/View/Index"
 
 function App() {
   // State for user authentication
@@ -226,6 +229,7 @@ function App() {
             <Route path="/sales-agent" element={<SalesAgentPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/category/:slug" element={<CategoryPage />} />
           </Routes>
         </main>
         <Footer />

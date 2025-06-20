@@ -50,7 +50,49 @@ export const useCMSContent = (contentType) => {
   return useApiData(() => cmsAPI.getHomepageContent(), [contentType])
 }
 
-// Hook for navigation menus
+// CHANGE: Updated navigation menus hook to use categories API
+// This ensures we get the actual category structure from the backend
 export const useNavigationMenus = () => {
-  return useApiData(() => cmsAPI.getNavigationMenus())
+  return useApiData(() => categoriesAPI.getAll(), [])
+}
+
+// CHANGE: Add new hook for category-based navigation
+// This hook specifically formats categories for navigation purposes
+export const useCategoryNavigation = () => {
+  const [navigationData, setNavigationData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const fetchCategoryNavigation = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await categoriesAPI.getAll()
+
+      // Process categories for navigation menu structure
+      const processedData = {
+        categories: response.data?.data?.categories || response.data?.categories || [],
+        timestamp: Date.now(),
+      }
+
+      setNavigationData(processedData)
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to fetch navigation data")
+      console.error("Navigation API Error:", err)
+
+      // Set fallback data structure
+      setNavigationData({
+        categories: [],
+        timestamp: Date.now(),
+      })
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchCategoryNavigation()
+  }, [fetchCategoryNavigation])
+
+  return { data: navigationData, loading, error, refetch: fetchCategoryNavigation }
 }

@@ -60,7 +60,8 @@ import { useNavigate, useLocation } from "react-router-dom"
 import FirstCraftLogo from "../assets/images/FirstCraft-logo.png"
 import RegistrationForm from "../pages/Registration/View/Index"
 import LoginPage from "../pages/Login/View/Index"
-import { useNavigationMenus } from "../hooks/useAuth"
+// CHANGE: Import the category navigation hook from the correct location
+import { useCategoryNavigation } from "../hooks/useApiData"
 
 // Styled Components (keeping existing styles)
 const Search = styled("div")(({ theme }) => ({
@@ -213,17 +214,47 @@ const NavigationBar = ({ isLoggedIn, currentUser, onLogout, isAdminPage }) => {
   const [activeDropdown, setActiveDropdown] = useState("")
 
   // Add dynamic menu loading
-  const { data: navigationData, loading: menusLoading, error: menusError } = useNavigationMenus()
+  // CHANGE: Use the enhanced category navigation hook instead of generic navigation
+  const { data: navigationData, loading: menusLoading, error: menusError } = useCategoryNavigation()
 
-  // Fallback menus in case of loading error
+  // CHANGE: Enhanced error handling for menu loading
+  useEffect(() => {
+    if (menusError) {
+      console.warn("Navigation menu loading error:", menusError)
+    }
+  }, [menusError])
+
+  // CHANGE: Replace static fallback menus with dynamic API integration
+  // OLD: Static fallback menus
+  // NEW: Dynamic menus from API with better error handling
   const fallbackMenus = {
     "Office Essentials": ["Paper Products", "Writing Instruments", "Binders & Filing"],
     "Toners & Inks": ["HP Toners", "Canon Inks", "Brother Cartridges"],
     "Office Machines": ["Printers", "Shredders", "Laminators"],
   }
 
-  // Use dynamic menus or fallback
-  const menus = navigationData?.menus || fallbackMenus
+  // CHANGE: Enhanced menu processing to handle API response structure
+  // Process navigation data to create menu structure from categories
+  const processNavigationMenus = (categoriesData) => {
+    if (!categoriesData?.categories) return fallbackMenus
+
+    const processedMenus = {}
+
+    categoriesData.categories.forEach((category) => {
+      if (category.subCategories && category.subCategories.length > 0) {
+        // Use main category as menu title and subcategories as menu items
+        processedMenus[category.name] = category.subCategories.map((sub) => sub.name)
+      } else {
+        // If no subcategories, create a single-item menu
+        processedMenus[category.name] = [category.name]
+      }
+    })
+
+    return Object.keys(processedMenus).length > 0 ? processedMenus : fallbackMenus
+  }
+
+  // CHANGE: Use processed menus instead of raw API data
+  const menus = navigationData?.categories ? processNavigationMenus(navigationData) : fallbackMenus
 
   // Check if user is admin
   const isAdmin = currentUser?.isAdmin || currentUser?.email?.toLowerCase().includes("admin")
@@ -255,8 +286,15 @@ const NavigationBar = ({ isLoggedIn, currentUser, onLogout, isAdminPage }) => {
 
   const toggleMobileSearch = () => setMobileSearchOpen((prev) => !prev)
 
-  const handleDropdownItemClick = (item) => {
-    console.log(`Clicked on ${item}`)
+  // CHANGE: Enhanced dropdown navigation with proper routing
+  const handleDropdownItemClick = (item, categoryName) => {
+    console.log(`Navigating to ${categoryName} -> ${item}`)
+    // Navigate to category page with proper slug
+    const categorySlug = item
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "")
+    navigate(`/category/${categorySlug}`)
     handleDropdownClose()
   }
 
@@ -586,7 +624,7 @@ const NavigationBar = ({ isLoggedIn, currentUser, onLogout, isAdminPage }) => {
                               onMouseLeave={handleDropdownClose}
                             >
                               {menus[menuName].map((item, index) => (
-                                <DropdownItem key={index} onClick={() => handleDropdownItemClick(item)}>
+                                <DropdownItem key={index} onClick={() => handleDropdownItemClick(item, menuName)}>
                                   {item}
                                 </DropdownItem>
                               ))}
