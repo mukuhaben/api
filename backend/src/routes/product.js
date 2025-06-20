@@ -1,6 +1,6 @@
 import express from "express"
 import { query, transaction } from "../config/database.js"
-import { verifyToken, requireAdmin, rateLimit } from "../middlewares/auth.js"
+import {authenticate, requireRole, requireAdmin, requireSalesAgent, requireCustomer, requireAuthenticated} from "../middlewares/auth.js"
 import { validate, schemas } from "../middlewares/validation.js"
 import ProductController from "../controllers/product.js" // Import ProductController
 
@@ -9,24 +9,49 @@ const router = express.Router()
 // Get all products with filtering and pagination
 router.get("/", validate(schemas.pagination, "query"), async (req, res) => {
   try {
-    const { page = 1, limit = 10, sortBy = "created_at", sortOrder = "DESC", search } = req.query
-    const offset = (page - 1) * limit
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "created_at",
+      sortOrder = "DESC",
+      search,
+    } = req.query;
+    const offset = (page - 1) * limit;
 
-    let whereClause = "WHERE p.is_active = true"
-    const queryParams = []
-    let paramCount = 0
+    // ✅ Sort field mapping (to avoid column errors)
+    const SORT_FIELD_MAP = {
+      name: "product_name",
+      created_at: "created_at",
+      stock: "stock_units",
+      price: "cost_price",
+    };
+
+    const ALLOWED_SORT_ORDERS = ["ASC", "DESC"];
+
+    const sanitizedSortBy = SORT_FIELD_MAP[sortBy] || "created_at";
+    const sanitizedSortOrder = ALLOWED_SORT_ORDERS.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "DESC";
+
+    let whereClause = "WHERE p.is_active = true";
+    const queryParams = [];
+    let paramCount = 0;
 
     if (search) {
-      paramCount++
-      whereClause += ` AND (p.product_name ILIKE $${paramCount} OR p.product_code ILIKE $${paramCount} OR p.description ILIKE $${paramCount})`
-      queryParams.push(`%${search}%`)
+      paramCount++;
+      whereClause += ` AND (
+        p.product_name ILIKE $${paramCount} OR
+        p.product_code ILIKE $${paramCount} OR
+        p.description ILIKE $${paramCount}
+      )`;
+      queryParams.push(`%${search}%`);
     }
 
     const productQuery = `
       SELECT 
         p.*,
-        c.name as category_name,
-        sc.name as subcategory_name,
+        c.name AS category_name,
+        sc.name AS subcategory_name,
         COALESCE(
           json_agg(
             json_build_object(
@@ -38,7 +63,7 @@ router.get("/", validate(schemas.pagination, "query"), async (req, res) => {
             )
           ) FILTER (WHERE pt.id IS NOT NULL), 
           '[]'
-        ) as pricing_tiers,
+        ) AS pricing_tiers,
         COALESCE(
           json_agg(
             json_build_object(
@@ -47,10 +72,11 @@ router.get("/", validate(schemas.pagination, "query"), async (req, res) => {
               'altText', pi.alt_text,
               'isPrimary', pi.is_primary,
               'sortOrder', pi.sort_order
-            ) ORDER BY pi.sort_order, pi.is_primary DESC
+            )
+            ORDER BY pi.sort_order, pi.is_primary DESC
           ) FILTER (WHERE pi.id IS NOT NULL), 
           '[]'
-        ) as images
+        ) AS images
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN categories sc ON p.subcategory_id = sc.id
@@ -58,47 +84,47 @@ router.get("/", validate(schemas.pagination, "query"), async (req, res) => {
       LEFT JOIN product_images pi ON p.id = pi.product_id
       ${whereClause}
       GROUP BY p.id, c.name, sc.name
-      ORDER BY p.${sortBy} ${sortOrder}
+      ORDER BY p.${sanitizedSortBy} ${sanitizedSortOrder}
       LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
-    `
+    `;
 
-    queryParams.push(limit, offset)
+    queryParams.push(limit, offset);
 
-    const result = await query(productQuery, queryParams)
+    const result = await query(productQuery, queryParams);
 
     // Get total count
     const countQuery = `
-      SELECT COUNT(*) as total
+      SELECT COUNT(*) AS total
       FROM products p
       ${whereClause}
-    `
+    `;
 
-    const countResult = await query(countQuery, queryParams.slice(0, paramCount))
-    const total = Number.parseInt(countResult.rows[0].total)
+    const countResult = await query(countQuery, queryParams.slice(0, paramCount));
+    const total = parseInt(countResult.rows[0].total, 10);
 
     res.json({
       success: true,
       data: {
         products: result.rows,
         pagination: {
-          page: Number.parseInt(page),
-          limit: Number.parseInt(limit),
+          page: parseInt(page, 10),
+          limit: parseInt(limit, 10),
           total,
           pages: Math.ceil(total / limit),
         },
       },
-    })
+    });
   } catch (error) {
-    console.error("Get products error:", error)
+    console.error("Get products error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch products",
-    })
+    });
   }
-})
+});
 
 // Bulk Import Products (Admin only)
-router.post("/bulk-import", verifyToken, requireAdmin, async (req, res) => {
+router.post("/bulk-import", authenticate, requireAdmin, async (req, res) => {
   // This controller logic will be moved to controllers/product.js later
   try {
     console.log("Bulk import request body:", req.body)
@@ -178,10 +204,9 @@ router.get("/:id", validate(schemas.uuidParam, "params"), async (req, res) => {
 
 // Create new product (Admin only)
 router.post(
-  "/",
-  rateLimit(5, 60000), // 5 attempts per minute
-  // verifyToken,
-  // requireAdmin,
+  "/", // 5 attempts per minute
+  authenticate,
+  requireAdmin,
   async (req, res) => {
     try {
       const {
@@ -347,10 +372,10 @@ router.post(
 )
 
 // Bulk Import Products (Admin only)
-router.post("/bulk-import", verifyToken, requireAdmin, ProductController.bulkImportProducts)
+router.post("/bulk-import", authenticate, requireAdmin, ProductController.bulkImportProducts)
 
 // Update product (Admin only)
-router.put("/:id", verifyToken, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
+router.put("/:id", authenticate, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
   try {
     const { id } = req.params
     const updateData = req.body
@@ -442,7 +467,7 @@ router.put("/:id", verifyToken, requireAdmin, validate(schemas.uuidParam, "param
 })
 
 // Delete product (Admin only)
-router.delete("/:id", verifyToken, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
+router.delete("/:id", authenticate, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
   try {
     const { id } = req.params
 
@@ -545,7 +570,7 @@ router.get("/:id/pricing/:quantity", validate(schemas.uuidParam, "params"), asyn
 })
 
 // Update product stock (Admin only)
-router.patch("/:id/stock", verifyToken, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
+router.patch("/:id/stock", authenticate, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
   try {
     const { id } = req.params
     const { quantity, movementType, notes } = req.body

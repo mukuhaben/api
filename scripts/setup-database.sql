@@ -43,7 +43,7 @@ CREATE TABLE users (
     company_name VARCHAR(255),
     contact_person VARCHAR(255),
     kra_pin VARCHAR(50),
-    cashback_phone VARCHAR(20),
+    cashback_phone VARCHAR(20) NOT NULL,
     agent_code VARCHAR(20) UNIQUE,
     is_active BOOLEAN DEFAULT true,
     email_verified BOOLEAN DEFAULT false,

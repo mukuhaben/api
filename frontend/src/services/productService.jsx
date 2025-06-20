@@ -1,4 +1,4 @@
-import { productsAPI } from "./api.js"
+import { productsAPI } from "./interceptor.js"
 
 class ProductService {
   // Get all products with proper parameter handling

@@ -82,7 +82,7 @@ export const authAPI = {
 
 // Products API
 export const productsAPI = {
-  getAll: (params) => api.get("/products", { params }),
+  getAll: (params) => api.get("http://localhost:3000/api/products/", { params }),
   getById: (id) => api.get(`/products/${id}`),
   create: (productData) => {
     // Transform camelCase to snake_case for backend compatibility

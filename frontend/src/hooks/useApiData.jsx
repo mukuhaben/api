@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { productsAPI, categoriesAPI, cmsAPI } from "../services/api"
+import { productsAPI, categoriesAPI, cmsAPI } from "../services/interceptor.js"
 
 // Custom hook for data fetching with error handling
 export const useApiData = (apiCall, dependencies = []) => {

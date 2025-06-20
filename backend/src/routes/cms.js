@@ -1,7 +1,7 @@
 import express from "express"
 import { Router } from "express"
 import cmsController from "../controllers/cmsController.js"; 
-import { verifyToken as authenticate, requireAdmin as authorize } from "../middlewares/auth.js";
+import {authenticate, requireRole, requireAdmin, requireSalesAgent, requireCustomer, requireAuthenticated} from "../middlewares/auth.js"
 import { validate, schemas } from "../middlewares/validation.js";
 
 
@@ -16,7 +16,7 @@ router.get("/homepage", cmsController.getHomepageContent);
 
 /* ----------  PROTECTED (ADMIN) CMS ENDPOINTS ---------- */
 router.use(authenticate);          // JWT check
-router.use(authorize);             // must be admin
+
 
 router.post("/navigation", cmsController.updateNavigation);
 

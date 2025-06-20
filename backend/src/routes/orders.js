@@ -1,6 +1,6 @@
 import express from "express"
 import db from "../config/database.js"
-import { verifyToken, requireAuthenticated, requireAdmin } from "../middlewares/auth.js"
+import {authenticate, requireRole, requireAdmin, requireSalesAgent, requireCustomer, requireAuthenticated} from "../middlewares/auth.js"
 import { validate, schemas } from "../middlewares/validation.js"
 
 const router = express.Router()
@@ -82,7 +82,7 @@ const calculateOrderPricing = async (items) => {
 }
 
 // Create new order
-router.post("/", verifyToken, requireAuthenticated, validate(schemas.orderCreation), async (req, res) => {
+router.post("/", authenticate, requireAuthenticated, validate(schemas.orderCreation), async (req, res) => {
   try {
     const { items, shippingAddress, billingAddress, notes } = req.body
     const customerId = req.user.id
@@ -241,7 +241,7 @@ router.post("/", verifyToken, requireAuthenticated, validate(schemas.orderCreati
 })
 
 // Get user orders
-router.get("/my-orders", verifyToken, requireAuthenticated, async (req, res) => {
+router.get("/my-orders", authenticate, requireAuthenticated, async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query
     const offset = (page - 1) * limit
@@ -301,7 +301,7 @@ router.get("/my-orders", verifyToken, requireAuthenticated, async (req, res) => 
 })
 
 // Get single order
-router.get("/:id", verifyToken, requireAuthenticated, validate(schemas.uuidParam, "params"), async (req, res) => {
+router.get("/:id", authenticate, requireAuthenticated, validate(schemas.uuidParam, "params"), async (req, res) => {
   try {
     const { id } = req.params
 
@@ -369,7 +369,7 @@ router.get("/:id", verifyToken, requireAuthenticated, validate(schemas.uuidParam
 })
 
 // Update order status (Admin only)
-router.patch("/:id/status", verifyToken, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
+router.patch("/:id/status", authenticate, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
   try {
     const { id } = req.params
     const { status, paymentStatus, trackingNumber, notes } = req.body
@@ -522,7 +522,7 @@ router.patch("/:id/status", verifyToken, requireAdmin, validate(schemas.uuidPara
 })
 
 // Get all orders (Admin only)
-router.get("/", verifyToken, requireAdmin, validate(schemas.pagination, "query"), async (req, res) => {
+router.get("/", authenticate, requireAdmin, validate(schemas.pagination, "query"), async (req, res) => {
   try {
     const { page, limit, sortBy, sortOrder, search } = req.query
     const offset = (page - 1) * limit
@@ -593,7 +593,7 @@ router.get("/", verifyToken, requireAdmin, validate(schemas.pagination, "query")
 // Cancel order
 router.patch(
   "/:id/cancel",
-  verifyToken,
+  authenticate,
   requireAuthenticated,
   validate(schemas.uuidParam, "params"),
   async (req, res) => {

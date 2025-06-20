@@ -1,13 +1,13 @@
 import express from "express"
 import bcrypt from "bcryptjs"
 import db from "../config/database.js"
-import { verifyToken, requireAuthenticated, requireAdmin } from "../middlewares/auth.js"
+import {authenticate, requireRole, requireAdmin, requireSalesAgent, requireCustomer, requireAuthenticated} from "../middlewares/auth.js"
 import { validate, schemas } from "../middlewares/validation.js"
 
 const router = express.Router()
 
 // Get all users (Admin only)
-router.get("/", verifyToken, requireAdmin, validate(schemas.pagination, "query"), async (req, res) => {
+router.get("/", authenticate, requireAdmin, validate(schemas.pagination, "query"), async (req, res) => {
   try {
     const { page, limit, sortBy, sortOrder, search, userType } = req.query
     const offset = (page - 1) * limit
@@ -84,7 +84,7 @@ router.get("/", verifyToken, requireAdmin, validate(schemas.pagination, "query")
 })
 
 // Register new customer by Admin
-router.post("/register-customer", verifyToken, requireAdmin, validate(schemas.userRegistration, "body"), async (req, res) => {
+router.post("/register-customer", authenticate, requireAdmin, validate(schemas.userRegistration, "body"), async (req, res) => {
   try {
     const {
       firstName,
@@ -172,7 +172,7 @@ router.post("/register-customer", verifyToken, requireAdmin, validate(schemas.us
 })
 
 // Get single user (Admin or own profile)
-router.get("/:id", verifyToken, requireAuthenticated, validate(schemas.uuidParam, "params"), async (req, res) => {
+router.get("/:id", authenticate, requireAuthenticated, validate(schemas.uuidParam, "params"), async (req, res) => {
   try {
     const { id } = req.params
 
@@ -305,7 +305,7 @@ router.get("/:id", verifyToken, requireAuthenticated, validate(schemas.uuidParam
 })
 
 // Update user profile
-router.put("/:id", verifyToken, requireAuthenticated, validate(schemas.uuidParam, "params"), async (req, res) => {
+router.put("/:id", authenticate, requireAuthenticated, validate(schemas.uuidParam, "params"), async (req, res) => {
   try {
     const { id } = req.params
 
@@ -400,7 +400,7 @@ router.put("/:id", verifyToken, requireAuthenticated, validate(schemas.uuidParam
 })
 
 // Deactivate user (Admin only)
-router.patch("/:id/deactivate", verifyToken, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
+router.patch("/:id/deactivate", authenticate, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
   try {
     const { id } = req.params
     const { reason } = req.body
@@ -441,7 +441,7 @@ router.patch("/:id/deactivate", verifyToken, requireAdmin, validate(schemas.uuid
 })
 
 // Reactivate user (Admin only)
-router.patch("/:id/reactivate", verifyToken, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
+router.patch("/:id/reactivate", authenticate, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
   try {
     const { id } = req.params
 
@@ -483,7 +483,7 @@ router.patch("/:id/reactivate", verifyToken, requireAdmin, validate(schemas.uuid
 // Get user activity (Admin or own activity)
 router.get(
   "/:id/activity",
-  verifyToken,
+  authenticate,
   requireAuthenticated,
   validate(schemas.uuidParam, "params"),
   async (req, res) => {
@@ -583,7 +583,7 @@ router.get(
 // Update user password
 router.patch(
   "/:id/password",
-  verifyToken,
+  authenticate,
   requireAuthenticated,
   validate(schemas.uuidParam, "params"),
   async (req, res) => {
@@ -661,7 +661,7 @@ router.patch(
 )
 
 // Get user statistics (Admin only)
-router.get("/stats/overview", verifyToken, requireAdmin, async (req, res) => {
+router.get("/stats/overview", authenticate, requireAdmin, async (req, res) => {
   try {
     // Get user counts by type
     const userStats = await db.query(`

@@ -1,13 +1,13 @@
 import express from "express"
 import axios from "axios"
 import db from "../config/database.js"
-import { verifyToken, requireAuthenticated } from "../middlewares/auth.js"
+import {authenticate, requireRole, requireAdmin, requireSalesAgent, requireCustomer, requireAuthenticated} from "../middlewares/auth.js"
 import { validate, schemas } from "../middlewares/validation.js"
 
 const router = express.Router()
 
 // Get wallet balance
-router.get("/balance", verifyToken, requireAuthenticated, async (req, res) => {
+router.get("/balance", authenticate, requireAuthenticated, async (req, res) => {
   try {
     const result = await db.query(
       `
@@ -43,7 +43,7 @@ router.get("/balance", verifyToken, requireAuthenticated, async (req, res) => {
 })
 
 // Get wallet transactions
-router.get("/transactions", verifyToken, requireAuthenticated, async (req, res) => {
+router.get("/transactions", authenticate, requireAuthenticated, async (req, res) => {
   try {
     const { page = 1, limit = 20, type } = req.query
     const offset = (page - 1) * limit
@@ -107,7 +107,7 @@ router.get("/transactions", verifyToken, requireAuthenticated, async (req, res) 
 })
 
 // Get cashback summary
-router.get("/cashback-summary", verifyToken, requireAuthenticated, async (req, res) => {
+router.get("/cashback-summary", authenticate, requireAuthenticated, async (req, res) => {
   try {
     // Get total cashback earned
     const totalEarnedResult = await db.query(
@@ -185,7 +185,7 @@ router.get("/cashback-summary", verifyToken, requireAuthenticated, async (req, r
 })
 
 // Initiate withdrawal
-router.post("/withdraw", verifyToken, requireAuthenticated, validate(schemas.walletWithdrawal), async (req, res) => {
+router.post("/withdraw", authenticate, requireAuthenticated, validate(schemas.walletWithdrawal), async (req, res) => {
   try {
     const { amount, paymentMethod, phoneNumber } = req.body
 
@@ -388,7 +388,7 @@ router.post("/withdraw", verifyToken, requireAuthenticated, validate(schemas.wal
 })
 
 // Get withdrawal history
-router.get("/withdrawals", verifyToken, requireAuthenticated, async (req, res) => {
+router.get("/withdrawals", authenticate, requireAuthenticated, async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query
     const offset = (page - 1) * limit
@@ -447,7 +447,7 @@ router.get("/withdrawals", verifyToken, requireAuthenticated, async (req, res) =
 })
 
 // Add manual credit (Admin only)
-router.post("/credit", verifyToken, async (req, res) => {
+router.post("/credit", authenticate, async (req, res) => {
   try {
     // Check if user is admin
     if (req.user.user_type !== "admin") {

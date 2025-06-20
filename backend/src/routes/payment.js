@@ -1,7 +1,7 @@
 import express from "express"
 import axios from "axios"
 import db from "../config/database.js"
-import { verifyToken, requireAuthenticated } from "../middlewares/auth.js"
+import {authenticate, requireRole, requireAdmin, requireSalesAgent, requireCustomer, requireAuthenticated} from "../middlewares/auth.js"
 import { validate, schemas } from "../middlewares/validation.js"
 
 const router = express.Router()
@@ -65,7 +65,7 @@ const formatPhoneNumber = (phone) => {
 // Initiate M-Pesa STK Push
 router.post(
   "/mpesa/stk-push",
-  verifyToken,
+  authenticate,
   requireAuthenticated,
   validate(schemas.paymentInitiation),
   async (req, res) => {
@@ -342,7 +342,7 @@ router.post("/mpesa/timeout", async (req, res) => {
 })
 
 // Check payment status
-router.get("/status/:paymentId", verifyToken, requireAuthenticated, async (req, res) => {
+router.get("/status/:paymentId", authenticate, requireAuthenticated, async (req, res) => {
   try {
     const { paymentId } = req.params
 
@@ -392,7 +392,7 @@ router.get("/status/:paymentId", verifyToken, requireAuthenticated, async (req, 
 })
 
 // Initiate KCB payment
-router.post("/kcb/initiate", verifyToken, requireAuthenticated, async (req, res) => {
+router.post("/kcb/initiate", authenticate, requireAuthenticated, async (req, res) => {
   try {
     const { orderId, phoneNumber } = req.body
 
@@ -529,7 +529,7 @@ router.post("/kcb/callback", async (req, res) => {
 })
 
 // Get payment history
-router.get("/history", verifyToken, requireAuthenticated, async (req, res) => {
+router.get("/history", authenticate, requireAuthenticated, async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query
     const offset = (page - 1) * limit

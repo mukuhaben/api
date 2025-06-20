@@ -47,7 +47,7 @@ import {
   DeleteForever,
 } from "@mui/icons-material"
 import { useNavigate } from "react-router-dom"
-import { usersAPI, ordersAPI, authAPI, uploadAPI } from "../../../services/api"
+import { usersAPI, ordersAPI, authAPI, uploadAPI } from "../../../services/interceptor"
 
 const AccountPage = () => {
   const theme = useTheme()

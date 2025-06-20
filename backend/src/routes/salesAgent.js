@@ -1,13 +1,13 @@
 // Convert from CommonJS to ESM
 import express from "express"
 import db from "../config/database.js"
-import { verifyToken, requireSalesAgentOrAdmin, requireAdmin } from "../middlewares/auth.js"
+import {authenticate, requireRole, requireAdmin, requireSalesAgent, requireSalesAgentOrAdmin, requireCustomer, requireAuthenticated} from "../middlewares/auth.js"
 import { validate, schemas } from "../middlewares/validation.js"
 
 const router = express.Router()
 
 // Get sales agent dashboard data
-router.get("/dashboard", verifyToken, requireSalesAgentOrAdmin, async (req, res) => {
+router.get("/dashboard", authenticate, requireSalesAgentOrAdmin, async (req, res) => {
   try {
     const agentId = req.user.user_type === "admin" ? req.query.agentId : req.user.id
 
@@ -116,7 +116,7 @@ router.get("/dashboard", verifyToken, requireSalesAgentOrAdmin, async (req, res)
 })
 
 // Get sales agent customers
-router.get("/customers", verifyToken, requireSalesAgentOrAdmin, async (req, res) => {
+router.get("/customers", authenticate, requireSalesAgentOrAdmin, async (req, res) => {
   try {
     const agentId = req.user.user_type === "admin" ? req.query.agentId : req.user.id
     const { page = 1, limit = 10, search } = req.query
@@ -194,7 +194,7 @@ router.get("/customers", verifyToken, requireSalesAgentOrAdmin, async (req, res)
 })
 
 // Get sales agent commissions
-router.get("/commissions", verifyToken, requireSalesAgentOrAdmin, async (req, res) => {
+router.get("/commissions", authenticate, requireSalesAgentOrAdmin, async (req, res) => {
   try {
     const agentId = req.user.user_type === "admin" ? req.query.agentId : req.user.id
     const { page = 1, limit = 10, status } = req.query
@@ -275,7 +275,7 @@ router.get("/commissions", verifyToken, requireSalesAgentOrAdmin, async (req, re
 })
 
 // Add customer to sales agent (Sales Agent only)
-router.post("/customers", verifyToken, requireSalesAgentOrAdmin, async (req, res) => {
+router.post("/customers", authenticate, requireSalesAgentOrAdmin, async (req, res) => {
   try {
     const agentId = req.user.id
     const { customerId } = req.body
@@ -339,7 +339,7 @@ router.post("/customers", verifyToken, requireSalesAgentOrAdmin, async (req, res
 })
 
 // Get all sales agents (Admin only)
-router.get("/", verifyToken, requireAdmin, async (req, res) => {
+router.get("/", authenticate, requireAdmin, async (req, res) => {
   try {
     const { page = 1, limit = 10, search } = req.query
     const offset = (page - 1) * limit
@@ -410,7 +410,7 @@ router.get("/", verifyToken, requireAdmin, async (req, res) => {
 // Update commission status (Admin only)
 router.patch(
   "/commissions/:id/status",
-  verifyToken,
+  authenticate,
   requireAdmin,
   validate(schemas.uuidParam, "params"),
   async (req, res) => {

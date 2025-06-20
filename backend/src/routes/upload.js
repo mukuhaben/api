@@ -4,7 +4,7 @@ import path from "path"
 import fs from "fs"
 import { v4 as uuidv4 } from "uuid"
 import sharp from "sharp"
-import { verifyToken, requireAuthenticated } from "../middlewares/auth.js"
+import {authenticate, requireRole, requireAdmin, requireSalesAgent, requireCustomer, requireAuthenticated} from "../middlewares/auth.js"
 
 const router = express.Router()
 
@@ -113,7 +113,7 @@ const processImage = async (inputPath, outputPath, options = {}) => {
 }
 
 // Upload single image
-router.post("/image/:type", verifyToken, requireAuthenticated, (req, res) => {
+router.post("/image/:type", authenticate, requireAuthenticated, (req, res) => {
   const uploadType = req.params.type
 
   if (!["products", "profiles", "categories"].includes(uploadType)) {
@@ -189,7 +189,7 @@ router.post("/image/:type", verifyToken, requireAuthenticated, (req, res) => {
 })
 
 // Upload multiple images
-router.post("/images/:type", verifyToken, requireAuthenticated, (req, res) => {
+router.post("/images/:type", authenticate, requireAuthenticated, (req, res) => {
   const uploadType = req.params.type
 
   if (!["products", "categories"].includes(uploadType)) {
@@ -254,7 +254,7 @@ router.post("/images/:type", verifyToken, requireAuthenticated, (req, res) => {
 })
 
 // Upload document
-router.post("/document/:type", verifyToken, requireAuthenticated, (req, res) => {
+router.post("/document/:type", authenticate, requireAuthenticated, (req, res) => {
   const uploadType = req.params.type || "temp"
 
   uploadDocument.single("document")(req, res, (err) => {
@@ -289,7 +289,7 @@ router.post("/document/:type", verifyToken, requireAuthenticated, (req, res) => 
 })
 
 // Upload any file type
-router.post("/file/:type", verifyToken, requireAuthenticated, (req, res) => {
+router.post("/file/:type", authenticate, requireAuthenticated, (req, res) => {
   const uploadType = req.params.type || "temp"
 
   uploadAny.single("file")(req, res, (err) => {
@@ -324,7 +324,7 @@ router.post("/file/:type", verifyToken, requireAuthenticated, (req, res) => {
 })
 
 // Delete file
-router.delete("/file/:type/:filename", verifyToken, requireAuthenticated, (req, res) => {
+router.delete("/file/:type/:filename", authenticate, requireAuthenticated, (req, res) => {
   try {
     const { type, filename } = req.params
 
@@ -424,7 +424,7 @@ router.get("/file/:type/:filename", (req, res) => {
 })
 
 // List files in directory
-router.get("/files/:type", verifyToken, requireAuthenticated, (req, res) => {
+router.get("/files/:type", authenticate, requireAuthenticated, (req, res) => {
   try {
     const { type } = req.params
     const { page = 1, limit = 20 } = req.query

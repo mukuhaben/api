@@ -26,25 +26,44 @@ export const validate = (schema, property = "body") => {
 export const schemas = {
   // User registration
   userRegistration: Joi.object({
-    username: Joi.string().alphanum().min(3).max(30).required(),
-    email: Joi.string().email().required(),
-    password: Joi.string().min(6).required(),
-    firstName: Joi.string().max(100),
-    lastName: Joi.string().max(100),
-    phone: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/),
-    userType: Joi.string().valid("customer", "sales_agent").default("customer"),
-    companyName: Joi.string().max(255),
-    contactPerson: Joi.string().max(255),
-    kraPin: Joi.string().max(50),
-    cashbackPhone: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/),
-  }),
+  first_name: Joi.string().max(100).required(),
+  last_name:  Joi.string().max(100).required(),
+  username:   Joi.string().alphanum().min(3).max(50).required(),
+  email:      Joi.string().email().max(255).required(),
+  password:   Joi.string().min(6).required(),
+  phone:          Joi.string().pattern(/^07\d{8}$/).optional(),
+  cashbackPhone:  Joi.string().pattern(/^07\d{8}$/).required(),
+  contactPerson:  Joi.string().max(255).optional(),
+  kraPin:         Joi.string().max(50).optional(),
+}),
 
   // User login
   userLogin: Joi.object({
-    email: Joi.string().email().required(),
-    password: Joi.string().required(),
-    userType: Joi.string().valid("customer", "sales_agent", "admin").default("customer"),
-  }),
+  email: Joi.string().email().required(),
+  password: Joi.string().required()
+}),
+
+// set password 
+ setPassword: Joi.object({
+  token: Joi.string().required(),
+  password: Joi.string().min(8).pattern(/[A-Z]/).pattern(/[a-z]/)
+    .pattern(/[0-9]/).pattern(/[!@#$%^&*]/).required()
+}),
+
+// forgot password
+forgotPassword: Joi.object({
+  email: Joi.string().email().required()
+}),
+
+//Reset Password
+resetPassword: Joi.object({
+  token: Joi.string().required(),
+  password: Joi.string().min(8).pattern(/[A-Z]/).pattern(/[a-z]/)
+    .pattern(/[0-9]/).pattern(/[!@#$%^&*]/).required(),
+  confirmPassword: Joi.any().valid(Joi.ref('password')).required()
+}),
+
+ 
 
   // Product creation
   productCreation: Joi.object({
@@ -182,21 +201,22 @@ export const schemas = {
   }),
 
   // Pagination query validation
-  pagination: Joi.object({
-    page: Joi.number().integer().min(1).default(1),
-    limit: Joi.number().integer().min(1).max(100).default(10),
-    sortBy: Joi.string().default("created_at"),
-    sortOrder: Joi.string().valid("asc", "desc").default("desc"),
-    search: Joi.string().allow(""),
-  }),
+ pagination: Joi.object({
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(10),
+  search: Joi.string().allow("", null),
+  sortBy: Joi.string()
+    .valid("name", "created_at", "stock", "price")
+    .insensitive()
+    .default("created_at"),
+  sortOrder: Joi.string()
+    .valid("asc", "desc", "ASC", "DESC")
+    .insensitive()
+    .default("DESC"),
+  category: Joi.string().allow("", null), // ✅ ADD THIS
+}),
 
-  // Password update
-  passwordUpdate: Joi.object({
-    passwordCurrent: Joi.string().required(),
-    password: Joi.string().min(6).required(),
-    passwordConfirm: Joi.string().valid(Joi.ref("password")).required(),
-  }),
-  
+
 
   // Profile update
   profileUpdate: Joi.object({
@@ -208,4 +228,8 @@ export const schemas = {
     kraPin: Joi.string().max(50),
     cashbackPhone: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/),
   }),
+
+
 }
+
+

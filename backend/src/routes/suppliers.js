@@ -1,12 +1,12 @@
 import express from "express"
 import db from "../config/database.js"
-import { verifyToken, requireAdmin } from "../middlewares/auth.js"
+import {authenticate, requireRole, requireAdmin, requireSalesAgent, requireCustomer, requireAuthenticated} from "../middlewares/auth.js"
 import { validate, schemas } from "../middlewares/validation.js"
 
 const router = express.Router()
 
 // Get all suppliers (Admin only)
-router.get("/", verifyToken, requireAdmin, validate(schemas.pagination, "query"), async (req, res) => {
+router.get("/", authenticate, requireAdmin, validate(schemas.pagination, "query"), async (req, res) => {
   try {
     const { page, limit, sortBy, sortOrder, search } = req.query
     const offset = (page - 1) * limit
@@ -70,7 +70,7 @@ router.get("/", verifyToken, requireAdmin, validate(schemas.pagination, "query")
 })
 
 // Get single supplier (Admin only)
-router.get("/:id", verifyToken, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
+router.get("/:id", authenticate, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
   try {
     const { id } = req.params
 
@@ -111,7 +111,7 @@ router.get("/:id", verifyToken, requireAdmin, validate(schemas.uuidParam, "param
 })
 
 // Create new supplier (Admin only)
-router.post("/", verifyToken, requireAdmin, validate(schemas.supplierCreation), async (req, res) => {
+router.post("/", authenticate, requireAdmin, validate(schemas.supplierCreation), async (req, res) => {
   try {
     const {
       name,
@@ -171,7 +171,7 @@ router.post("/", verifyToken, requireAdmin, validate(schemas.supplierCreation), 
 })
 
 // Update supplier (Admin only)
-router.put("/:id", verifyToken, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
+router.put("/:id", authenticate, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
   try {
     const { id } = req.params
     const updateData = req.body
@@ -254,7 +254,7 @@ router.put("/:id", verifyToken, requireAdmin, validate(schemas.uuidParam, "param
 })
 
 // Delete supplier (Admin only)
-router.delete("/:id", verifyToken, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
+router.delete("/:id", authenticate, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
   try {
     const { id } = req.params
 
@@ -297,7 +297,7 @@ router.delete("/:id", verifyToken, requireAdmin, validate(schemas.uuidParam, "pa
 // Get supplier purchase orders (Admin only)
 router.get(
   "/:id/purchase-orders",
-  verifyToken,
+  authenticate,
   requireAdmin,
   validate(schemas.uuidParam, "params"),
   async (req, res) => {

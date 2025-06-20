@@ -1,6 +1,6 @@
 import express from "express"
 import db from "../config/database.js"
-import { verifyToken, requireAdmin } from "../middlewares/auth.js"
+import {authenticate, requireRole, requireAdmin, requireSalesAgent, requireCustomer, requireAuthenticated} from "../middlewares/auth.js"
 import { validate, schemas } from "../middlewares/validation.js"
 
 const router = express.Router()
@@ -142,7 +142,7 @@ router.get("/:id", validate(schemas.uuidParam, "params"), async (req, res) => {
 })
 
 // Create new category (Admin only)
-router.post("/", verifyToken, requireAdmin, validate(schemas.categoryCreation), async (req, res) => {
+router.post("/", authenticate, requireAdmin, validate(schemas.categoryCreation), async (req, res) => {
   try {
     const { name, description, parentId, slug, imageUrl, sortOrder } = req.body
 
@@ -203,7 +203,7 @@ router.post("/", verifyToken, requireAdmin, validate(schemas.categoryCreation), 
 })
 
 // Update category (Admin only)
-router.put("/:id", verifyToken, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
+router.put("/:id", authenticate, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
   try {
     const { id } = req.params
     const { name, description, parentId, slug, imageUrl, sortOrder, isActive } = req.body
@@ -290,7 +290,7 @@ router.put("/:id", verifyToken, requireAdmin, validate(schemas.uuidParam, "param
 })
 
 // Delete category (Admin only)
-router.delete("/:id", verifyToken, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
+router.delete("/:id", authenticate, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
   try {
     const { id } = req.params
 
