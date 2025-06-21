@@ -293,7 +293,7 @@ router.post('/forgot-password', validate(schemas.forgotPassword), controller.for
 router.get('/verify-reset-token', controller.verifyResetToken);
 router.post('/reset-password', validate(schemas.resetPassword), controller.resetPassword);
 router.post('/login', login);
-router.post('/refresh', controller.refreshToken);
+router.post('/refresh-token', controller.refreshToken);
 router.post('/logout', controller.logout);
 router.post('/change-password', authenticate, validate(schemas.changePassword), controller.changePassword);
 

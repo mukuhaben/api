@@ -275,6 +275,7 @@
 // controllers/authController.js
 import bcrypt from 'bcryptjs';
 import db from "../config/database.js";
+import jwt from "jsonwebtoken";
 import {
   generateAccessToken,
   generateConfirmationToken,
@@ -284,6 +285,14 @@ import {
 import { sendConfirmationEmail, sendResetEmail } from '../utils/email.js';
 import { hash, compare } from '../utils/passwords.js';
 import { signAccess } from '../utils/tokens.js';
+
+
+// Token generators
+const signAccessToken = (payload) =>
+  jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '15m' });
+
+const signRefreshToken = (payload) =>
+  jwt.sign(payload, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
 
 export const getSalesAgents = async (_, res) => {
@@ -420,7 +429,7 @@ export const login = async (req, res) => {
     const { email, password } = req.body;
 
     const { rows } = await db.query(
-      'SELECT id, password_hash, user_type FROM users WHERE email=$1',
+      'SELECT id, password_hash, user_type FROM users WHERE email = $1',
       [email]
     );
 
@@ -428,29 +437,55 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const token = signAccess({ id: rows[0].id, role: rows[0].user_type });
+    const userPayload = {
+      id: rows[0].id,
+      role: rows[0].user_type,
+      email,
+    };
+
+    const token = signAccessToken(userPayload);
+    const refreshToken = signRefreshToken(userPayload);
 
     return res.json({
-      token,
-      user: {
-        id: rows[0].id,
-        role: rows[0].user_type,
-        email,
-      },
+      token,          // access token
+      refreshToken,   // new: refresh token
+      user: userPayload,
     });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: 'Server error' }); // ✅ Ensure JSON response
+    console.error('Login error:', err);
+    return res.status(500).json({ message: 'Server error' });
   }
 };
 
-
 export const refreshToken = async (req, res) => {
+  // 1. Extract token from Authorization header
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.startsWith("Bearer ")
+    ? authHeader.split(" ")[1]
+    : null;
+
+  if (!token) {
+    return res.status(401).json({ message: 'Refresh token not provided' });
+  }
+
   try {
-    const newAccessToken = generateAccessToken({ id: 1, email: 'demo@user.com' });
+    // 2. Verify the refresh token using your refresh secret
+    const decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
+
+    // Optional: fetch user from DB using decoded.id if needed
+
+    // 3. Generate a new access token using decoded user info
+    const newAccessToken = generateAccessToken({
+      id: decoded.id,
+      email: decoded.email,
+      role: decoded.role,
+    });
+
+    // 4. Respond with new access token
     res.status(200).json({ token: newAccessToken });
-  } catch {
-    res.status(403).json({ message: 'Invalid refresh token' });
+  } catch (err) {
+    console.error('Refresh token verification failed:', err.message);
+    return res.status(403).json({ message: 'Invalid or expired refresh token' });
   }
 };
 

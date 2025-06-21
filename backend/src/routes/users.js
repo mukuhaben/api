@@ -171,274 +171,66 @@ router.post("/register-customer", authenticate, requireAdmin, validate(schemas.u
   }
 })
 
-// Get single user (Admin or own profile)
-router.get("/:id", authenticate, requireAuthenticated, validate(schemas.uuidParam, "params"), async (req, res) => {
+router.get("/:id", authenticate, requireAuthenticated, async (req, res) => {
   try {
-    const { id } = req.params
+    const { id } = req.params;
 
-    // Check if user can access this profile
+    // Allow only admin or the user accessing their own profile
     if (req.user.user_type !== "admin" && req.user.id !== id) {
       return res.status(403).json({
         success: false,
         message: "Access denied",
-      })
+      });
     }
 
+    // Strictly select only fields from the users table as per schema
     const query = `
       SELECT 
-        u.id, u.username, u.email, u.first_name, u.last_name, u.phone,
-        u.user_type, u.company_name, u.contact_person, u.kra_pin,
-        u.cashback_phone, u.agent_code, u.commission_rate, u.territory,
-        u.profile_image_url, u.is_active, u.created_at, u.last_login,
-        u.address, u.city, u.region, u.country, u.postal_code
-      FROM users u
-      WHERE u.id = $1 AND u.is_active = true
-    `
+        id,
+        username,
+        email,
+        first_name,
+        last_name,
+        phone,
+        user_type,
+        company_name,
+        contact_person,
+        kra_pin,
+        cashback_phone,
+        agent_code,
+        is_active,
+        email_verified,
+        last_login,
+        created_at,
+        updated_at
+      FROM users
+      WHERE id = $1 AND is_active = true
+    `;
 
-    const result = await db.query(query, [id])
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      })
-    }
-
-    const user = result.rows[0]
-
-    // Get additional data based on user type
-    if (user.user_type === "customer") {
-      // Get order statistics
-      const orderStats = await db.query(
-        `
-        SELECT 
-          COUNT(*) as total_orders,
-          COALESCE(SUM(total_amount), 0) as total_spent,
-          COALESCE(SUM(cashback_amount), 0) as total_cashback_earned
-        FROM orders 
-        WHERE customer_id = $1
-      `,
-        [id],
-      )
-
-      user.orderStats = orderStats.rows[0]
-
-      // Get wallet balance
-      const walletBalance = await db.query(
-        `
-        SELECT COALESCE(SUM(
-          CASE 
-            WHEN transaction_type IN ('credit', 'cashback') THEN amount
-            WHEN transaction_type IN ('debit', 'withdrawal') THEN -amount
-            ELSE 0
-          END
-        ), 0) as balance
-        FROM wallet_transactions 
-        WHERE user_id = $1
-      `,
-        [id],
-      )
-
-      user.walletBalance = Number.parseFloat(walletBalance.rows[0].balance) || 0
-
-      // Get recent orders for transactions tab (e.g., last 10)
-      const recentOrders = await db.query(
-        `
-        SELECT
-          id, order_number, order_date, total_amount, status, payment_status, cashback_amount
-        FROM orders
-        WHERE customer_id = $1
-        ORDER BY order_date DESC
-        LIMIT 10
-      `,
-        [id],
-      )
-      user.recentOrders = recentOrders.rows
-
-      // Get recent cashback transactions for cashbacks tab (e.g., last 10)
-      const recentCashbackTransactions = await db.query(
-        `
-        SELECT
-          id, transaction_type, amount, balance_after, description, status, created_at, reference_type, reference_id
-        FROM wallet_transactions
-        WHERE user_id = $1 AND (transaction_type ILIKE '%cashback%' OR reference_type = 'cashback_redemption' OR description ILIKE '%cashback%')
-        ORDER BY created_at DESC
-        LIMIT 10
-      `,
-        [id],
-      )
-      user.recentCashbackTransactions = recentCashbackTransactions.rows
-
-    } else if (user.user_type === "sales_agent") {
-      // Get sales agent statistics
-      const agentStats = await db.query(
-        `
-        SELECT 
-          COUNT(DISTINCT cos.customer_id) as total_customers,
-          COUNT(DISTINCT o.id) as total_orders,
-          COALESCE(SUM(sac.commission_amount), 0) as total_commission_earned,
-          COALESCE(SUM(CASE WHEN sac.status = 'paid' THEN sac.commission_amount ELSE 0 END), 0) as total_commission_paid
-        FROM customer_order_sequences cos
-        LEFT JOIN orders o ON cos.customer_id = o.customer_id
-        LEFT JOIN sales_agent_commissions sac ON cos.sales_agent_id = sac.sales_agent_id
-        WHERE cos.sales_agent_id = $1
-      `,
-        [id],
-      )
-
-      user.agentStats = agentStats.rows[0]
-    }
-
-    res.json({
-      success: true,
-      data: {
-        user,
-      },
-    })
-  } catch (error) {
-    console.error("Get user error:", error)
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch user",
-    })
-  }
-})
-
-// Update user profile
-router.put("/:id", authenticate, requireAuthenticated, validate(schemas.uuidParam, "params"), async (req, res) => {
-  try {
-    const { id } = req.params
-
-    // Check if user can update this profile
-    if (req.user.user_type !== "admin" && req.user.id !== id) {
-      return res.status(403).json({
-        success: false,
-        message: "Access denied",
-      })
-    }
-
-    const updateData = req.body
-
-    // Remove sensitive fields that shouldn't be updated via this endpoint
-    delete updateData.password
-    delete updateData.password_hash
-    delete updateData.user_type
-    delete updateData.is_active
-    delete updateData.agent_code
-
-    // Build dynamic update query
-    const updateFields = []
-    const updateValues = []
-    let paramCount = 0
-
-    const allowedFields = [
-      "first_name",
-      "last_name",
-      "phone",
-      "company_name",
-      "contact_person",
-      "kra_pin",
-      "cashback_phone",
-      "profile_image_url",
-      "address",
-      "city",
-      "region",
-      "country",
-      "postal_code",
-      "commission_rate",
-      "territory",
-    ]
-
-    for (const [key, value] of Object.entries(updateData)) {
-      if (allowedFields.includes(key) && value !== undefined) {
-        paramCount++
-        updateFields.push(`${key} = $${paramCount}`)
-        updateValues.push(value)
-      }
-    }
-
-    if (updateFields.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "No valid fields to update",
-      })
-    }
-
-    updateFields.push("updated_at = CURRENT_TIMESTAMP")
-    updateValues.push(id)
-
-    const updateQuery = `
-      UPDATE users 
-      SET ${updateFields.join(", ")}
-      WHERE id = $${paramCount + 1} AND is_active = true
-      RETURNING id, username, email, first_name, last_name
-    `
-
-    const result = await db.query(updateQuery, updateValues)
+    const result = await db.query(query, [id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: "User not found",
-      })
+      });
     }
 
     res.json({
       success: true,
-      message: "Profile updated successfully",
       data: {
         user: result.rows[0],
       },
-    })
+    });
+
   } catch (error) {
-    console.error("Update user error:", error)
+    console.error("Error fetching user profile:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to update profile",
-    })
+      message: "Failed to fetch user profile",
+    });
   }
-})
-
-// Deactivate user (Admin only)
-router.patch("/:id/deactivate", authenticate, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {
-  try {
-    const { id } = req.params
-    const { reason } = req.body
-
-    const result = await db.query(
-      `
-      UPDATE users 
-      SET is_active = false, 
-          deactivation_reason = $1,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = $2 AND is_active = true
-      RETURNING id, username, email
-    `,
-      [reason || "Deactivated by admin", id],
-    )
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      })
-    }
-
-    res.json({
-      success: true,
-      message: "User deactivated successfully",
-      data: {
-        user: result.rows[0],
-      },
-    })
-  } catch (error) {
-    console.error("Deactivate user error:", error)
-    res.status(500).json({
-      success: false,
-      message: "Failed to deactivate user",
-    })
-  }
-})
+});
 
 // Reactivate user (Admin only)
 router.patch("/:id/reactivate", authenticate, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {

@@ -9,7 +9,7 @@ dotenv.config();
  * Payload should include: user ID, email, and role.
  */
 export function generateAccessToken(payload) {
-  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1d' });
+  return jwt.sign(payload, process.env.JWT_REFRESH_SECRET, { expiresIn: '1d' });
 }
 
 /**
